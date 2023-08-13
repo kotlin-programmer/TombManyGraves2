@@ -52,7 +52,7 @@ public class ClientEvents {
     @SubscribeEvent
     public void onRenderWorldLast(RenderWorldLastEvent event)
     {
-        Profiler profiler = Minecraft.getMinecraft().mcProfiler;
+        Profiler profiler = Minecraft.getMinecraft().profiler;
 
         profiler.startSection("tmg_particles");
         ParticleRenderDispatcher.dispatch();

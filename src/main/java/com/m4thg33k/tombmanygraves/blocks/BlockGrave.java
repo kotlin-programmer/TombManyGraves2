@@ -151,7 +151,7 @@ public class BlockGrave extends BaseBlock {
     }
 
     @Override
-    public void onEntityCollidedWithBlock(World worldIn, BlockPos pos, IBlockState state, Entity entityIn) {
+    public void onEntityCollision(World worldIn, BlockPos pos, IBlockState state, Entity entityIn) {
         TileEntity tile = worldIn.getTileEntity(pos);
         if (tile != null && tile instanceof TileGrave)
         {

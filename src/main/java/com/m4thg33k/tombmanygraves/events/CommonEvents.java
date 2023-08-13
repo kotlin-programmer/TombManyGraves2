@@ -131,13 +131,12 @@ public class CommonEvents {
 			if (posToPlace.getY() == -1) {
 				ChatHelper.sayMessage(player, "A suitable location for the grave wasn't found.");
 
-				// we need to give them their items back in this case so they
-				// can be dropped like normal
+				// we need to give them their items back in this case so that they can be dropped like normal
 				inventoryHolder.insertInventory(player);
 			} else {
 				player.world.setBlockState(posToPlace, state);
 				TileEntity tile = player.world.getTileEntity(posToPlace);
-				if (tile != null && tile instanceof TileGrave) {
+				if (tile instanceof TileGrave) {
 					TileGrave grave = (TileGrave) tile;
 					grave.getPlayerData(player);
 
@@ -159,8 +158,7 @@ public class CommonEvents {
 				}
 			}
 		} else {
-			// if graves aren't allowed, we need to give the player their items
-			// back
+			// if graves aren't allowed, we need to give the player their items back
 			inventoryHolder.insertInventory(player);
 		}
 

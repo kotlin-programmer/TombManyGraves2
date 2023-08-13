@@ -10,7 +10,6 @@ public class ChatHelper {
         if(!world.isRemote)
         {
             player.sendMessage(new TextComponentString(text));
-//            player.addChatMessage(new TextComponentString(text));
         }
     }
 

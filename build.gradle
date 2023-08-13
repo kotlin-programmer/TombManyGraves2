@@ -1,76 +1,71 @@
 buildscript {
     repositories {
-        jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
+        maven {
+            url = 'https://maven.minecraftforge.net/'
+        }
+        maven {
+            name = "CurseForge"
+            url = "https://minecraft.curseforge.com/api/maven/"
+        }
+        mavenCentral()
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'net.minecraftforge.gradle'
 //Only edit below this line, the above code adds and enables the nessasary things for Forge to be setup.
 
 version = "1.12-4.2.0"
 group= "com.m4thg33k.tombmanygraves" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "TombManyGraves"
 
-sourceCompatibility = targetCompatibility = "1.8" // Need this here so eclipse task generates correctly.
-compileJava {
-    sourceCompatibility = targetCompatibility = "1.8"
-}
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
 minecraft {
-    version = "1.12.2-14.23.4.2759"
-    runDir = "run"
-    mappings = "snapshot_20171010"
-
-    replace "@VERSION@", project.version
+    mappings channel: mappings_channel, version: mappings_version
 }
 
 repositories {
+    mavenCentral()
     maven {
-        url "http://dvs1.progwml6.com/files/maven"
+        url = 'https://maven.minecraftforge.net/'
     }
     maven {
-        url "http://maven.epoxide.xyz"
+        url = "https://www.cursemaven.com"
     }
     maven {
-        url "http://maven.amadornes.com/"
+        url = "https://dvs1.progwml6.com/files/maven"
     }
-	maven {
-		url "http://tehnut.info/maven"
-	}
-	maven {
-		url "http://maven.ic2.player.to"
-	}
-	maven {
-        name = "CurseForge"
-        url = "https://minecraft.curseforge.com/api/maven/"
+    maven {
+        url = "https://maven.epoxide.xyz"
+    }
+    maven {
+        url = 'https://maven.minecraftforge.net/'
+    }
+    maven {
+        url = "https://maven.amadornes.com/"
+    }
+    maven {
+        url = "https://tehnut.info/maven"
+    }
+    maven {
+        url = "https://maven.ic2.player.to"
     }
 }
 
 dependencies {
-	deobfCompile "mezz.jei:jei_1.12:+"
-	deobfCompile 'baubles:Baubles:1.12:1.5.2'
-//	deobfCompile "mcp.mobius.waila:Hwyla:+"
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    implementation fg.deobf("curse.maven:jei-${jei_version}")
+    implementation fg.deobf("curse.maven:baubles-${baubles_version}")
 }
 
-processResources
-{
-    // this will ensure that this task is redone when the versions change.
+processResources {
     inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    inputs.property "mcversion", minecraft_version
 
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
-    }
-        
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+    filesMatching('mcmod.info') {
+        expand 'version': project.version, 'mcversion': minecraft_version
     }
 }

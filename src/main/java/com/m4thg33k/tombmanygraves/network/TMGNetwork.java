@@ -80,7 +80,7 @@ public class TMGNetwork {
 
     public static void sendToClients(WorldServer world, BlockPos pos, BasePacket packet)
     {
-        Chunk chunk = world.getChunkFromBlockCoords(pos);
+        Chunk chunk = world.getChunk(pos);
         for (EntityPlayer player : world.playerEntities)
         {
             if (!(player instanceof EntityPlayerMP))
@@ -90,7 +90,6 @@ public class TMGNetwork {
             EntityPlayerMP playerMP = (EntityPlayerMP) player;
             if (world.getPlayerChunkMap().isPlayerWatchingChunk(playerMP, chunk.x, chunk.z))
             {
-//                LogHelper.info("Sending packet to: " + player.getName());
                 TMGNetwork.sendTo(packet, playerMP);
             }
         }

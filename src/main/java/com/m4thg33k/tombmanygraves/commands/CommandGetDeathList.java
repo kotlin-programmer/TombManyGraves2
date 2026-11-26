@@ -13,15 +13,17 @@ import com.m4thg33k.tombmanygraves.invman.DeathInventoryHandler;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.items.ItemHandlerHelper;
 
 public class CommandGetDeathList extends CommandBase {
 
     public CommandGetDeathList()
     {
-        super("tmg_getDeathList", 0, false);
+        super("tmg_getDeathList", 2, false);
 
         aliases.add("tmg_deathlist");
     }
@@ -30,20 +32,20 @@ public class CommandGetDeathList extends CommandBase {
     @Nonnull
     @ParametersAreNonnullByDefault
     public String getUsage(ICommandSender sender) {
-        return COMMAND_NAME + " [player] <timestamp or latest>";
+        return COMMAND_NAME + " <player> <timestamp or latest> [receiving player]";
     }
 
     @Override
     @ParametersAreNonnullByDefault
     public boolean isUsernameIndex(String[] args, int index) {
-        return index == 0;
+        return index == 0 || index == 2;
     }
 
     @Override
     @Nonnull
     @ParametersAreNonnullByDefault
     public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
-        if (args.length == 1)
+        if (args.length == 1 || args.length == 3)
         {
             return getListOfStringMatchingLastWord(args, server.getOnlinePlayerNames());
         }
@@ -76,11 +78,34 @@ public class CommandGetDeathList extends CommandBase {
             return;
         }
 
-        boolean worked = DeathInventoryHandler.getDeathList((EntityPlayer)sender, (EntityPlayer)sender, args[0], args[1], false);
-        if (!worked)
+        EntityPlayer receiver;
+        if (args.length > 2)
+        {
+            receiver = server.getPlayerList().getPlayerByUsername(args[2]);
+        }
+        else if (sender.getCommandSenderEntity() instanceof EntityPlayer)
+        {
+            receiver = (EntityPlayer) sender.getCommandSenderEntity();
+        }
+        else
+        {
+            receiver = server.getPlayerList().getPlayerByUsername(args[0]);
+        }
+
+        if (receiver == null)
+        {
+            sender.sendMessage(new TextComponentString("The receiving player is offline."));
+            return;
+        }
+
+        ItemStack deathList = DeathInventoryHandler.getDeathListFromFile(args[0], args[1]);
+        if (deathList == null)
         {
             sender.sendMessage(new TextComponentString("Failed to retrieve list."));
             sender.sendMessage(new TextComponentString("Check spelling and timestamp."));
+            return;
         }
+
+        ItemHandlerHelper.giveItemToPlayer(receiver, deathList);
     }
 }

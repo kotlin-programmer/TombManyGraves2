@@ -335,7 +335,7 @@ public class TileGrave extends TileEntity {
 
     public boolean isFriend(EntityPlayer player)
     {
-        return FriendHandler.hasAsFriend(playerID, player.getUniqueID());
+        return !world.isRemote && FriendHandler.hasAsFriend(playerID, player.getUniqueID());
     }
 
     public boolean hasAccess(EntityPlayer player)

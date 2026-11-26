@@ -59,7 +59,6 @@ public class ItemDeathList extends Item{
         super.addInformation(stack, world, tooltip, advanced);
 
         boolean isShifted = Keyboard.isKeyDown(Keyboard.KEY_RSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_LSHIFT);
-        boolean isControlled = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL);
 
         if (isShifted) {
             tooltip.add(TextFormatting.GOLD + "Right-click to view a list of everything");
@@ -68,17 +67,6 @@ public class ItemDeathList extends Item{
         }
         else {
             tooltip.add(TextFormatting.ITALIC + "<Shift for explanation>");
-        }
-
-        if (isControlled)
-        {
-            tooltip.add(TextFormatting.BLUE + "\"/tmg_deathlist [player] latest\"");
-            tooltip.add(TextFormatting.BLUE + "will give you a list of everything");
-            tooltip.add(TextFormatting.BLUE + "from before your last death");
-        }
-        else
-        {
-            tooltip.add(TextFormatting.ITALIC + "<Control for command>");
         }
     }
 

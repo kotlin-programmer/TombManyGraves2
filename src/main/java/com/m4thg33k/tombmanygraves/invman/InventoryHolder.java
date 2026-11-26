@@ -22,6 +22,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.Constants;
 
 public class InventoryHolder {
     public static final String TAG_NAME = "InventoryHolder";
@@ -62,27 +63,33 @@ public class InventoryHolder {
         playerName = player.getName();
         compound.setString(PLAYER_NAME, playerName);
 
-        setTimestamp(new SimpleDateFormat("MM_dd_YYYY_HH_mm_ss").format(new Date()));
+        setTimestamp(new SimpleDateFormat("MM_dd_yyyy_HH_mm_ss").format(new Date()));
     }
     
     public List<ItemStack> getAllItems(){
     	List<ItemStack> list = new ArrayList<>();
     	for(String key : compound.getKeySet()){
-    		TempInventory inv = new TempInventory(compound.getTagList(key, 10));
+    		if(compound.getTagId(key) != Constants.NBT.TAG_LIST) continue;
+    		TempInventory inv = new TempInventory(compound.getTagList(key, Constants.NBT.TAG_COMPOUND));
     		list.addAll(inv.getListOfNonEmptyItemStacks());
     	}
     	return list;
     }
     
-    public void ensure(List<EntityItem> drops){
+    // Removes items that are not part of the actual drops and returns the drops that belong to this holder
+    public List<EntityItem> ensure(List<EntityItem> drops){
+    	List<EntityItem> unmatched = new ArrayList<>(drops);
+    	List<EntityItem> matched = new ArrayList<>();
     	for(String key : compound.getKeySet()){
-    		TempInventory inv = new TempInventory(compound.getTagList(key, 10));
+    		if(compound.getTagId(key) != Constants.NBT.TAG_LIST) continue;
+    		TempInventory inv = new TempInventory(compound.getTagList(key, Constants.NBT.TAG_COMPOUND));
     		for(int i = 0; i < inv.getSizeInventory(); i++){
     			boolean contains = false;
-    			for(EntityItem itm : drops){
+    			for(EntityItem itm : unmatched){
     				if(ItemStack.areItemStacksEqual(inv.getStackInSlot(i), itm.getItem())){
     					contains = true;
-    					drops.remove(itm);
+    					unmatched.remove(itm);
+    					matched.add(itm);
     					break;
     				}
     			}
@@ -95,6 +102,7 @@ public class InventoryHolder {
     		compound.setTag(key, list);
     	}
     	isEmpty = getAllItems().isEmpty();
+    	return matched;
     }
 
     public void grabPlayerData(EntityPlayer player, BlockPos pos) {

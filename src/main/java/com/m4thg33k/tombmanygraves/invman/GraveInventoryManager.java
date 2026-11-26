@@ -99,8 +99,7 @@ public class GraveInventoryManager {
 
 	public void finalizeListeners() {
 		sortedListeners = this.listenerMap.entrySet().stream().sorted((x, y) -> {
-			System.out.println(annotationMap.get(x.getValue()));
-			int flag = -Integer.compare(clampPriority(annotationMap.get(x.getValue()).priority()), annotationMap.get(y.getValue()).priority());
+			int flag = -Integer.compare(clampPriority(annotationMap.get(x.getValue()).priority()), clampPriority(annotationMap.get(y.getValue()).priority()));
 			if (flag == 0) {
 				flag = x.getKey().compareTo(y.getKey());
 			}

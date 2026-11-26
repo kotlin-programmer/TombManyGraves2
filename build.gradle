@@ -13,6 +13,9 @@ buildscript {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
     }
 }
+plugins {
+    id 'me.modmuss50.mod-publish-plugin' version "${mod_publish_gradle_version}"
+}
 apply plugin: 'net.minecraftforge.gradle'
 //Only edit below this line, the above code adds and enables the nessasary things for Forge to be setup.
 
@@ -67,5 +70,19 @@ processResources {
 
     filesMatching('mcmod.info') {
         expand 'version': project.version, 'mcversion': minecraft_version
+    }
+}
+
+publishMods {
+    file = jar.archiveFile
+    changelog = providers.environmentVariable("CHANGELOG").orElse("See GitHub releases for changelog")
+    version = project.version
+    type = STABLE
+    modLoaders.add("forge")
+
+    github {
+        accessToken = providers.environmentVariable("GITHUB_TOKEN")
+        repository = providers.environmentVariable("GITHUB_REPOSITORY").orElse("owner/repo")
+        commitish = providers.environmentVariable("GITHUB_SHA").orElse("HEAD")
     }
 }

@@ -1,255 +1,156 @@
 package com.m4thg33k.tombmanygraves.invman;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.m4thg33k.tombmanygraves.ModConfigs;
+import com.m4thg33k.tombmanygraves.Names;
 import com.m4thg33k.tombmanygraves.items.ModItems;
-import com.m4thg33k.tombmanygraves.util.ChatHelper;
+import com.m4thg33k.tombmanygraves.util.LogHelper;
 
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.common.DimensionManager;
 
 public class DeathInventoryHandler {
 
-    private static String FILE_PREFIX = "." + "/TombManyGraves/savedInventories";
+    private static final String LEGACY_DIR = "./TombManyGraves/savedInventories";
 
-    public static boolean checkFilePath()
+    private static File getSaveDir()
     {
-        File file = new File(FILE_PREFIX);
-        boolean hasPath = true;
-        if (!file.exists())
+        File worldDir = DimensionManager.getCurrentSaveRootDirectory();
+        if (worldDir == null)
         {
-            hasPath = file.mkdirs();
+            return null;
         }
+        File dir = new File(worldDir, Names.MODID + "/savedInventories");
+        if (!dir.exists())
+        {
+            if (!dir.mkdirs())
+            {
+                return null;
+            }
+            importLegacy(dir);
+        }
+        return dir;
+    }
 
-        return hasPath;
+    // Saves used to be stored in the instance dir
+    private static void importLegacy(File dir)
+    {
+        File[] legacy = new File(LEGACY_DIR).listFiles((d, name) -> name.endsWith(".json"));
+        if (legacy == null || legacy.length == 0)
+        {
+            return;
+        }
+        int imported = 0;
+        for (File file : legacy)
+        {
+            try
+            {
+                Files.copy(file.toPath(), new File(dir, file.getName()).toPath());
+                imported++;
+            }
+            catch (Exception e)
+            {
+                LogHelper.warn("Could not import " + file + ": " + e);
+            }
+        }
+        LogHelper.info("Imported " + imported + " inventory saves from " + LEGACY_DIR);
+        if (imported < legacy.length)
+        {
+            LogHelper.warn("Not all inventory saves could be imported, leaving " + LEGACY_DIR + " in place");
+        }
+        else if (!new File(LEGACY_DIR).renameTo(new File(LEGACY_DIR + "_imported")))
+        {
+            LogHelper.warn("Could not rename " + LEGACY_DIR + " after importing it");
+        }
+    }
+
+    private static File getFile(String playerName, String timestamp)
+    {
+        File dir = getSaveDir();
+        return dir == null ? null : new File(dir, playerName + "#" + timestamp + ".json");
     }
 
     public static boolean writeInventoryFile(InventoryHolder inventoryHolder)
     {
-        boolean hasPath = checkFilePath();
-
-        if (! ModConfigs.ALLOW_INVENTORY_SAVES || !hasPath)
+        if (!ModConfigs.ALLOW_INVENTORY_SAVES)
         {
             return false;
         }
 
-        boolean didWork = false;
-
-        String filename = "/" + inventoryHolder.getPlayerName();
-        String timestamp = inventoryHolder.getTimestamp();
-        String filePostfix = timestamp + ".json";
-
-        String fullFilename = FILE_PREFIX + filename + "#" + filePostfix;
-
-        NBTTagCompound tagCompound = new NBTTagCompound();
-        tagCompound = inventoryHolder.writeToNBT(tagCompound);
-        didWork = writePortion(fullFilename, tagCompound.toString());
-
-        if (didWork)
+        File file = getFile(inventoryHolder.getPlayerName(), inventoryHolder.getTimestamp());
+        File latest = getFile(inventoryHolder.getPlayerName(), "latest");
+        if (file == null || latest == null)
         {
-            try {
-                Path from = Paths.get(fullFilename);
-                Path to = Paths.get(FILE_PREFIX + filename + "#latest.json");
-                Files.copy(from, to, StandardCopyOption.REPLACE_EXISTING);
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
+            return false;
         }
 
-        return didWork;
-    }
-
-    private static boolean writePortion(String filename, String toWrite)
-    {
-        boolean didWork = true;
-
-        try (FileWriter file = new FileWriter(filename))
+        try
         {
-            file.write(toWrite);
-            file.close();
+            NBTTagCompound tagCompound = inventoryHolder.writeToNBT(new NBTTagCompound());
+            Files.write(file.toPath(), tagCompound.toString().getBytes(StandardCharsets.UTF_8));
+            Files.copy(file.toPath(), latest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return true;
         }
         catch (Exception e)
         {
-            e.printStackTrace();
-            didWork = false;
+            LogHelper.error("Failed to write " + file + ": " + e);
+            return false;
         }
-
-        return didWork;
-    }
-
-    public static void clearLatest(EntityPlayer player)
-    {
-        String filename = "/" + player.getName();
-        String timestamp = "latest";
-        String filePostfix = timestamp + ".json";
-
-        String fullFilename = FILE_PREFIX + filename + "#" + filePostfix;
-        writePortion(fullFilename, "{}");
-    }
-
-    public static List<String> getSavedInventories()
-    {
-        List<String> saved = new ArrayList<>();
-        boolean doesPathExist = checkFilePath();
-        if (!doesPathExist)
-        {
-            return saved;
-        }
-        String[] files = new File(FILE_PREFIX).list();
-        for (String file : files)
-        {
-            if (file.endsWith(".json"))
-            {
-                saved.add(file);
-            }
-        }
-
-        return saved;
     }
 
     public static List<String> getFilenames(String playerName)
     {
         List<String> saved = new ArrayList<>();
-        boolean doesPathExist = checkFilePath();
-        if (!doesPathExist)
+        File dir = getSaveDir();
+        String[] files = dir == null ? null : dir.list();
+        if (files == null)
         {
             return saved;
         }
-        String[] files = new File(FILE_PREFIX).list();
+        String prefix = playerName + "#";
         for (String file : files)
         {
-            if (file.startsWith(playerName) && file.endsWith(".json"))
+            if (file.startsWith(prefix) && file.endsWith(".json"))
             {
-                saved.add(file.substring(playerName.length()+1, file.length()-5));
+                saved.add(file.substring(prefix.length(), file.length() - 5));
             }
         }
 
         return saved;
     }
 
-    public static ItemStack getDeathListFromFile(String playerName, String timestamp){
-        String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
-
-        BufferedReader reader = null;
-
-        try{
-            reader = new BufferedReader(new FileReader(filename));
-            String fileData = reader.readLine();
-            NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            if (allNBT.getKeySet().size() > 0){
-                ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
-                theList.setTagCompound(allNBT);
-                
-                return theList;
-            }
-
-            return null;
-        } catch (Exception e){
-            return null;
-        }finally {
-			if(reader != null)
-				try {
-					reader.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-		}
-    }
-
-    public static boolean getDeathList(EntityPlayer playerOld, EntityPlayer playerNew, String playerName, String timestamp, boolean didDie)
+    public static ItemStack getDeathListFromFile(String playerName, String timestamp)
     {
-        boolean didWork = true;
-
-        String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
-
-        BufferedReader reader;
-
-        try
+        NBTTagCompound allNBT = getSavedInventoryAsNBT(playerName, timestamp);
+        if (allNBT == null || allNBT.isEmpty())
         {
-            reader = new BufferedReader(new FileReader(filename));
-            String fileData = reader.readLine();
-            NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            if (allNBT.getKeySet().size() > 0)
-            {
-                ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
-                theList.setTagCompound(allNBT);
-
-                BlockPos pos = playerOld.getPosition();
-                EntityPlayer thePlayer = playerOld;
-                if (didDie)
-                {
-                    thePlayer = playerNew;
-//                    LogHelper.info("Player respawn dimension: " + playerOld.getSpawnDimension());
-//                    LogHelper.info("Player respawn dimension: " + playerOld.world.provider.getRespawnDimension((EntityPlayerMP)playerOld));
-//                    LogHelper.info(playerOld.hasSpawnDimension());
-//                    BlockPos bedPos = player.getBedLocation(player.getSpawnDimension());
-                    BlockPos bedPos = playerOld.getBedLocation(playerOld.world.provider.getDimension());
-                    if (bedPos != null)
-                    {
-//                        LogHelper.info("A " + bedPos.toString());
-                        pos = bedPos;
-                    }
-                    else
-                    {
-                        bedPos = playerOld.getBedLocation(playerOld.getSpawnDimension());
-                        if (bedPos != null){
-//                            LogHelper.info("B " + bedPos.toString());
-                            pos = bedPos;
-                        } else {
-                            pos = playerOld.world.getSpawnPoint();
-                        }
-                    }
-                }
-                EntityItem entityItem = new EntityItem(thePlayer.world, pos.getX(), pos.getY(), pos.getZ(), theList);
-                thePlayer.world.spawnEntity(entityItem);
-//                EntityItem entityItem = new EntityItem(playerOld.world, pos.getX(), pos.getY(), pos.getZ(), theList);
-//                playerOld.world.spawnEntity(entityItem);
-//                LogHelper.info("Spawning Death List in world: " + thePlayer.world.provider.getDimension() + " at location: " + pos.toString());
-            }
-            else
-            {
-                ChatHelper.sayMessage(playerOld.world, playerOld, playerName + " had no items upon death!");
-            }
-            reader.close();
+            return null;
         }
-        catch (Exception e)
-        {
-            didWork = false;
-        }
-        return didWork;
+        ItemStack theList = new ItemStack(ModItems.itemDeathList, 1);
+        theList.setTagCompound(allNBT);
+        return theList;
     }
 
     public static NBTTagCompound getSavedInventoryAsNBT(String playerName, String timestamp)
     {
-        String filename = FILE_PREFIX + "/" + playerName + "#" + timestamp + ".json";
-
-        BufferedReader reader;
-
+        File file = getFile(playerName, timestamp);
+        if (file == null || !file.isFile())
+        {
+            return null;
+        }
         try
         {
-            reader = new BufferedReader(new FileReader(filename));
-            String fileData = reader.readLine();
-            NBTTagCompound allNBT = JsonToNBT.getTagFromJson(fileData);
-            reader.close();
-            return allNBT;
-        } catch (Exception e)
+            return JsonToNBT.getTagFromJson(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
+        }
+        catch (Exception e)
         {
             return null;
         }

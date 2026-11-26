@@ -141,8 +141,8 @@ public class ModConfigs {
 
     private static void handleCommonConfigs()
     {
-        ENABLE_GRAVES = config.get("allowedObjects", "enableGraves", true, "If set to false, graves will no longer be " +
-                "spawned upon players deaths. This does not get rid of any graves currently in-world." +
+        ENABLE_GRAVES = config.get("allowedObjects", "enableGraves", true, "If set to false, the mod does nothing on player " +
+                "deaths: no graves, death lists or inventory saves. Graves currently in-world keep working." +
                 " (Defaults to true...obviously.)").getBoolean();
 
         DROP_ITEMS_ON_GROUND = config.get("graveConfigs", "dropItemsOnGround", false, "If set to true, instead of" +
